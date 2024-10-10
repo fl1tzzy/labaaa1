@@ -1,4 +1,4 @@
-```c
+
 #include "../include/single_linked_list.h"
 #include "../include/dbms.h"
 #include "../include/tree.h"
@@ -412,4 +412,3 @@ void comand_handler(DBMS *dbms, QueryData data, const char* filename) {
         case 'T': handle_tree(dbms, data, filename); break;
     }
 }
-```
