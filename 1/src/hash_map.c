@@ -54,24 +54,31 @@ Hash_Map *hash_map_insert(Hash_Map *map, const char *key, const char *value) {
 
     size_t idx = hash(key) % map->size;
 
-    // Линейное пробирование для поиска свободного места
-    while (map->entries[idx].key != NULL) {
-        idx += 1;
+    // Линейное пробирование для поиска свободного места или существующего ключа
+    size_t start_idx = idx;
+    do {
+        if (map->entries[idx].key != NULL) {
+            // Проверяем, совпадает ли ключ
+            if (!strcmp(map->entries[idx].key, key)) {
+                // Ключ уже существует, не добавляем новый элемент
+                return map;
+            }
+        } else {
+            // Найдено свободное место
+            map->entries[idx].key = calloc(strlen(key) + 1, sizeof(char));
+            strcpy(map->entries[idx].key, key);
 
-        if (idx == map->size) {
-            return hash_map_insert(hash_map_expand(map), key, value);
+            map->entries[idx].value = calloc(strlen(value) + 1, sizeof(char));
+            strcpy(map->entries[idx].value, value);
+
+            return map;
         }
-    }
 
-    // Копируем ключ
-    map->entries[idx].key = calloc(strlen(key) + 1, sizeof(char));
-    strcpy(map->entries[idx].key, key);
+        idx = (idx + 1) % map->size;
+    } while (idx != start_idx);
 
-    // Копируем значение
-    map->entries[idx].value = calloc(strlen(value) + 1, sizeof(char));
-    strcpy(map->entries[idx].value, value);
-
-    return map;
+    // Если свободного места нет, расширяем хэш-таблицу
+    return hash_map_insert(hash_map_expand(map), key, value);
 }
 
 // Проверка, содержит ли хэш-таблица ключ
@@ -79,13 +86,16 @@ bool hash_map_has_key(Hash_Map *map, const char *key) {
     assert(map != NULL);
     assert(key != NULL);
 
-    for (size_t idx = hash(key) % map->size; idx < map->size; idx++) {
-        char *current = map->entries[idx].key;
+    size_t idx = hash(key) % map->size;
+    size_t start_idx = idx;
 
-        if (current == NULL) continue;
+    do {
+        if (map->entries[idx].key != NULL && !strcmp(map->entries[idx].key, key)) {
+            return true;
+        }
 
-        if (!strcmp(current, key)) return true;
-    }
+        idx = (idx + 1) % map->size;
+    } while (idx != start_idx);
 
     return false;
 }
@@ -96,13 +106,16 @@ char *hash_map_at(Hash_Map *map, const char *key) {
     assert(key != NULL);
     assert(hash_map_has_key(map, key));
 
-    for (size_t idx = hash(key) % map->size; idx < map->size; idx++) {
-        char *current = map->entries[idx].key;
+    size_t idx = hash(key) % map->size;
+    size_t start_idx = idx;
 
-        if (current == NULL) continue;
+    do {
+        if (map->entries[idx].key != NULL && !strcmp(map->entries[idx].key, key)) {
+            return map->entries[idx].value;
+        }
 
-        if (!strcmp(current, key)) return map->entries[idx].value;
-    }
+        idx = (idx + 1) % map->size;
+    } while (idx != start_idx);
 
     assert(false && "Key not found in hash map.");
     return NULL;
@@ -114,10 +127,10 @@ bool hash_map_remove(Hash_Map *map, const char *key) {
     assert(key != NULL);
 
     size_t idx = hash(key) % map->size;
+    size_t start_idx = idx;
 
-    // Линейное пробирование для поиска ключа
-    while (map->entries[idx].key != NULL) {
-        if (strcmp(map->entries[idx].key, key) == 0) {
+    do {
+        if (map->entries[idx].key != NULL && !strcmp(map->entries[idx].key, key)) {
             // Нашли ключ, теперь его нужно удалить
 
             // Освобождаем память, выделенную под ключ и значение
@@ -154,7 +167,7 @@ bool hash_map_remove(Hash_Map *map, const char *key) {
 
         // Переходим к следующему индексу в случае коллизии
         idx = (idx + 1) % map->size;
-    }
+    } while (idx != start_idx);
 
     return false;  // Ключ не найден
 }
