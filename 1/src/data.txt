@@ -1,1 +1,3 @@
-
+mystack = 1 2 3 4
+myarr = 14 88
+mytree = 16 15 13 19
