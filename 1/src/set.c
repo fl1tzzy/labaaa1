@@ -1,68 +1,68 @@
-#include "../include/set.h"
+#include "../include/set.h" 
 
-Set *create_set(int capacity) {
-    Set *set = malloc(sizeof(Set));
-    set->elements = (int *)malloc(capacity * sizeof(int));
-    set->size = 0;
-    set->capacity = capacity;
-    return set;
+Set *create_set(int capacity) {  // Функция для создания нового множества с заданной начальной емкостью.
+    Set *set = malloc(sizeof(Set));  // Выделяем память для структуры Set.
+    set->elements = (int *)malloc(capacity * sizeof(int));  // Выделяем память для массива элементов множества.
+    set->size = 0;  // Инициализируем размер множества нулем (множество пустое).
+    set->capacity = capacity;  // Устанавливаем начальную емкость множества.
+    return set;  // Возвращаем указатель на созданное множество.
 }
 
-bool contains(Set *set, int element) {
-    for (int i = 0; i < set->size; i++) {
-        if (set->elements[i] == element) {
-            return true;
+bool contains(Set *set, int element) {  // Функция для проверки наличия элемента в множестве.
+    for (int i = 0; i < set->size; i++) {  // Проходим по всем элементам множества.
+        if (set->elements[i] == element) {  // Если элемент найден.
+            return true;  // Возвращаем true (элемент есть в множестве).
         }
     }
-    return false;
+    return false;  // Возвращаем false (элемента нет в множестве).
 }
 
-void resize_set(Set *set) {
-    set->capacity *= 2;
-    set->elements = realloc(set->elements, set->capacity * sizeof(int));
+void resize_set(Set *set) {  // Функция для увеличения емкости множества.
+    set->capacity *= 2;  // Удваиваем емкость множества.
+    set->elements = realloc(set->elements, set->capacity * sizeof(int));  // Перераспределяем память для массива элементов.
 }
 
-void set_add(Set *set, int element) {
-    if(set->size == set->capacity) {
-        resize_set(set);
+void set_add(Set *set, int element) {  // Функция для добавления элемента в множество.
+    if(set->size == set->capacity) {  // Если множество заполнено.
+        resize_set(set);  // Увеличиваем емкость множества.
     }
 
-    if (contains(set, element)) {
-        return;
+    if (contains(set, element)) {  // Если элемент уже есть в множестве.
+        return;  // Ничего не делаем и выходим из функции.
     }
 
-    if (set->size == set->capacity) {
-        set->capacity *= 2;
-        set->elements = (int *)realloc(set->elements, set->capacity * sizeof(int));
+    if (set->size == set->capacity) {  // Если множество заполнено (повторная проверка).
+        set->capacity *= 2;  // Удваиваем емкость множества.
+        set->elements = (int *)realloc(set->elements, set->capacity * sizeof(int));  // Перераспределяем память для массива элементов.
     }
 
-    set->elements[set->size] = element;
-    set->size++;
+    set->elements[set->size] = element;  // Добавляем элемент в конец множества.
+    set->size++;  // Увеличиваем размер множества.
 }
 
-void set_at(Set *set, int element) {
-    for (int i = 0; i < set->size; i++) {
-        if (set->elements[i] == element) {
-            printf("Элемент %d найден в множестве.\n", element);
-            return;
+void set_at(Set *set, int element) {  // Функция для поиска элемента в множестве и вывода сообщения о его наличии.
+    for (int i = 0; i < set->size; i++) {  // Проходим по всем элементам множества.
+        if (set->elements[i] == element) {  // Если элемент найден.
+            printf("Элемент %d найден в множестве.\n", element);  // Выводим сообщение о том, что элемент найден.
+            return;  // Выходим из функции.
         }
     }
-    printf("Элемент %d не найден в множестве.\n", element);
+    printf("Элемент %d не найден в множестве.\n", element);  // Выводим сообщение о том, что элемент не найден.
 }
 
-void set_del(Set *set, int element) {
-    for (int i = 0; i < set->size; i++) {
-        if (set->elements[i] == element) {
-            for (int j = i; j < set->size - 1; j++) {
+void set_del(Set *set, int element) {  // Функция для удаления элемента из множества.
+    for (int i = 0; i < set->size; i++) {  // Проходим по всем элементам множества.
+        if (set->elements[i] == element) {  // Если элемент найден.
+            for (int j = i; j < set->size - 1; j++) {  // Сдвигаем все элементы после удаляемого на одну позицию влево.
                 set->elements[j] = set->elements[j + 1];
             }
-            set->size--;
-            return;
+            set->size--;  // Уменьшаем размер множества.
+            return;  // Выходим из функции.
         }
     }
 }
 
-void free_set(Set *set) {
-    free(set->elements);
-    free(set);
+void free_set(Set *set) {  // Функция для освобождения памяти, выделенной под множество.
+    free(set->elements);  // Освобождаем память, выделенную под массив элементов.
+    free(set);  // Освобождаем память, выделенную под структуру Set.
 }
