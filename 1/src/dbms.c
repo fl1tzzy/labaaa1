@@ -1,114 +1,94 @@
+#include "../include/single_linked_list.h"  
+#include "../include/dbms.h"                
+#include "../include/tree.h"                
+#include <stdio.h>                          
+#include <string.h>                        
+#include <stdlib.h>                         
 
-#include "../include/single_linked_list.h"
-#include "../include/dbms.h"
-#include "../include/tree.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-// Функция для парсинга запроса и заполнения структуры QueryData
 QueryData parse_query(const char* query) {
-    QueryData data;
-    // Инициализация структуры QueryData нулевыми значениями
-    memset(&data, 0, sizeof(data));
+    QueryData data;                          // Объявляем структуру для хранения данных запроса
+    memset(&data, 0, sizeof(data));          // Инициализируем структуру нулями
 
-    // Попытка разбора строки запроса в соответствии с ожидаемым форматом
     if (sscanf(query, "%s %s %s %s", data.command, data.variable, data.key, data.value) == 4 ||
         sscanf(query, "%s %s %s", data.command, data.variable, data.value) == 3 ||
         sscanf(query, "%s %s", data.command, data.variable) == 2) {
-        return data;
+        return data;                         // Парсим запрос и возвращаем структуру с данными
     }
 
-    // Вывод сообщения об ошибке, если формат запроса некорректен
-    fprintf(stderr, "Invalid query format\n");
-    data.command[0] = '\0';
-    return data;
+    fprintf(stderr, "Invalid query format\n"); // Выводим сообщение об ошибке, если формат запроса некорректен
+    data.command[0] = '\0';                  // Очищаем команду в структуре
+    return data;                             // Возвращаем структуру с пустой командой
 }
 
-// Функция для чтения токенов из строки и добавления их в соответствующую структуру данных
 void read_tokens(DBMS *dbms, char *value) {
-    // Разделение строки на токены по пробелам
-    char *token = strtok(value, " ");
+    char *token = strtok(value, " ");        // Разбиваем строку на токены по пробелам
     while (token != NULL) {
-        // В зависимости от типа структуры данных, добавление токена в соответствующую структуру
-        switch (dbms->v_type) {
-            case _STACK: dbms->data.stack = push(dbms->data.stack, token); break;
-            case _SINGLE_LINKED_LIST: push_back(dbms->data.list, token); break;
-            case _ARR: append_string(dbms->data.arr, token); break;
+        switch (dbms->v_type) {              // Определяем тип структуры данных
+            case _STACK: dbms->data.stack = push(dbms->data.stack, token); break; // Добавляем токен в стек
+            case _SINGLE_LINKED_LIST: push_back(dbms->data.list, token); break; // Добавляем токен в односвязный список
+            case _ARR: append_string(dbms->data.arr, token); break; // Добавляем токен в массив строк
             case _HASH_MAP: {
                 char key[50], val[50];
-                // Разбор токена на ключ и значение для хеш-карты
                 if (sscanf(token, "%49[^:]:%49s", key, val) == 2) {
-                    dbms->data.hash_map = hash_map_insert(dbms->data.hash_map, key, val);
+                    dbms->data.hash_map = hash_map_insert(dbms->data.hash_map, key, val); // Добавляем пару ключ-значение в хеш-таблицу
                 }
                 break;
             }
-            case _QUEUE: push_queue(dbms->data.queue, token); break;
-            case _DOUBLE_LINKED_LIST: addToDoublyLinkedListTail(dbms->data.dlist, token); break;
-            case _TREE: insertElement(dbms->data.tree, atoi(token)); break;
+            case _QUEUE: push_queue(dbms->data.queue, token); break; // Добавляем токен в очередь
+            case _DOUBLE_LINKED_LIST: addToDoublyLinkedListTail(dbms->data.dlist, token); break; // Добавляем токен в двусвязный список
+            case _TREE: insertElement(dbms->data.tree, atoi(token)); break; // Добавляем токен в дерево
+            case _SET: set_add(dbms->data.set, atoi(token)); break; // Добавляем токен в множество
         }
-        // Переход к следующему токену
-        token = strtok(NULL, " ");
+        token = strtok(NULL, " ");           // Переходим к следующему токену
     }
 }
 
-// Функция для чтения данных из файла и заполнения соответствующей структуры данных
 DBMS *read_from_file(DBMS *dbms, QueryData q_data, const char* filename) {
-    // Открытие файла для чтения
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(filename, "r");       // Открываем файл для чтения
     if (!file) {
-        perror("Failed to open file");
-        return NULL;
+        perror("Failed to open file");       // Выводим сообщение об ошибке, если файл не открыт
+        return NULL;                         // Возвращаем NULL, если файл не открыт
     }
 
     char line[256], name[256], value[256];
-    // Чтение строк из файла
-    while (fgets(line, sizeof(line), file)) {
-        // Удаление символа новой строки
-        line[strcspn(line, "\n")] = 0;
-        // Разбор строки на имя переменной и значение
+    while (fgets(line, sizeof(line), file)) { // Читаем файл построчно
+        line[strcspn(line, "\n")] = 0;       // Удаляем символ новой строки
         if (sscanf(line, "%s = %[^\n]", name, value) == 2 && strcmp(name, q_data.variable) == 0) {
-            // Чтение токенов из значения и добавление их в соответствующую структуру данных
-            read_tokens(dbms, value);
+            read_tokens(dbms, value);        // Если имя переменной совпадает, читаем токены
         }
     }
 
-    // Закрытие файла
-    fclose(file);
-    return dbms;
+    fclose(file);                            // Закрываем файл
+    return dbms;                             // Возвращаем обновленный объект DBMS
 }
 
-// Функция для проверки, является ли структура данных пустой
 int is_empty(DBMS *dbms) {
-    // В зависимости от типа структуры данных, проверка на пустоту
-    switch (dbms->v_type) {
-        case _STACK: return dbms->data.stack == NULL;
-        case _SINGLE_LINKED_LIST: return dbms->data.list->head == NULL;
-        case _ARR: return dbms->data.arr->size == 0;
+    switch (dbms->v_type) {                  // Определяем тип структуры данных
+        case _STACK: return dbms->data.stack == NULL; // Проверяем, пуст ли стек
+        case _SINGLE_LINKED_LIST: return dbms->data.list->head == NULL; // Проверяем, пуст ли односвязный список
+        case _ARR: return dbms->data.arr->size == 0; // Проверяем, пуст ли массив строк
         case _HASH_MAP: {
             for (size_t i = 0; i < dbms->data.hash_map->size; i++) {
-                if (dbms->data.hash_map->entries[i].key) return 0;
+                if (dbms->data.hash_map->entries[i].key) return 0; // Проверяем, пуста ли хеш-таблица
             }
             return 1;
         }
-        case _QUEUE: return dbms->data.queue->front == NULL;
-        case _DOUBLE_LINKED_LIST: return dbms->data.dlist->head == NULL;
-        case _TREE: return dbms->data.tree->root == NULL;
+        case _QUEUE: return dbms->data.queue->front == NULL; // Проверяем, пуста ли очередь
+        case _DOUBLE_LINKED_LIST: return dbms->data.dlist->head == NULL; // Проверяем, пуст ли двусвязный список
+        case _TREE: return dbms->data.tree->root == NULL; // Проверяем, пусто ли дерево
+        case _SET: return dbms->data.set->size == 0; // Проверяем, пусто ли множество
     }
-    return 1;
+    return 1;                                // Возвращаем 1, если структура данных пуста
 }
 
-// Функция для записи токенов в файл
 void write_tokens(FILE *file, DBMS *dbms, const char *name) {
-    // Если структура данных пуста, выход из функции
-    if (is_empty(dbms)) return;
+    if (is_empty(dbms)) return;              // Если структура данных пуста, выходим из функции
 
-    // В зависимости от типа структуры данных, запись токенов в файл
-    switch (dbms->v_type) {
+    switch (dbms->v_type) {                  // Определяем тип структуры данных
         case _STACK: {
             stack* current = dbms->data.stack;
             while (current) {
-                fprintf(file, " %s", current->data);
+                fprintf(file, " %s", current->data); // Записываем данные стека в файл
                 current = current->next;
             }
             break;
@@ -116,21 +96,21 @@ void write_tokens(FILE *file, DBMS *dbms, const char *name) {
         case _SINGLE_LINKED_LIST: {
             Node* current = dbms->data.list->head;
             while (current) {
-                fprintf(file, " %s", current->data);
+                fprintf(file, " %s", current->data); // Записываем данные односвязного списка в файл
                 current = current->next;
             }
             break;
         }
         case _ARR: {
             for (int i = 0; i < dbms->data.arr->size; i++) {
-                fprintf(file, " %s", dbms->data.arr->data[i]);
+                fprintf(file, " %s", dbms->data.arr->data[i]); // Записываем данные массива строк в файл
             }
             break;
         }
         case _HASH_MAP: {
             for (size_t i = 0; i < dbms->data.hash_map->size; i++) {
                 if (dbms->data.hash_map->entries[i].key) {
-                    fprintf(file, " %s:%s", dbms->data.hash_map->entries[i].key, dbms->data.hash_map->entries[i].value);
+                    fprintf(file, " %s:%s", dbms->data.hash_map->entries[i].key, dbms->data.hash_map->entries[i].value); // Записываем данные хеш-таблицы в файл
                 }
             }
             break;
@@ -138,7 +118,7 @@ void write_tokens(FILE *file, DBMS *dbms, const char *name) {
         case _QUEUE: {
             Node* current = dbms->data.queue->front;
             while (current) {
-                fprintf(file, " %s", current->data);
+                fprintf(file, " %s", current->data); // Записываем данные очереди в файл
                 current = current->next;
             }
             break;
@@ -146,269 +126,254 @@ void write_tokens(FILE *file, DBMS *dbms, const char *name) {
         case _DOUBLE_LINKED_LIST: {
             Node* current = dbms->data.dlist->head;
             while (current) {
-                fprintf(file, " %s", current->data);
+                fprintf(file, " %s", current->data); // Записываем данные двусвязного списка в файл
                 current = current->next;
             }
             break;
         }
         case _TREE: {
-            printTree(dbms->data.tree->root, file);
+            printTree(dbms->data.tree->root, file); // Записываем данные дерева в файл
+            break;
+        }
+        case _SET: {
+            for (size_t i = 0; i < dbms->data.set->size; i++) {
+                fprintf(file, " %d", dbms->data.set->elements[i]); // Записываем данные множества в файл
+            }
             break;
         }
     }
 }
 
-// Функция для записи данных в файл
 void write_to_file(DBMS *dbms, QueryData q_data, const char* filename) {
-    // Открытие файла для чтения
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(filename, "r");       // Открываем файл для чтения
     if (!file) {
-        perror("Failed to open file for reading");
-        return;
+        perror("Failed to open file for reading"); // Выводим сообщение об ошибке, если файл не открыт
+        return;                              // Выходим из функции
     }
 
-    // Открытие временного файла для записи
-    FILE* temp_file = fopen("temp.txt", "w");
+    FILE* temp_file = fopen("temp.txt", "w"); // Открываем временный файл для записи
     if (!temp_file) {
-        perror("Failed to open temp file for writing");
-        fclose(file);
-        return;
+        perror("Failed to open temp file for writing"); // Выводим сообщение об ошибке, если временный файл не открыт
+        fclose(file);                        // Закрываем файл для чтения
+        return;                              // Выходим из функции
     }
 
     char line[256], name[256], value[256];
     int found = 0;
 
-    // Чтение строк из файла
-    while (fgets(line, sizeof(line), file)) {
-        // Удаление символа новой строки
-        line[strcspn(line, "\n")] = 0;
-        // Разбор строки на имя переменной и значение
+    while (fgets(line, sizeof(line), file)) { // Читаем файл построчно
+        line[strcspn(line, "\n")] = 0;       // Удаляем символ новой строки
         if (sscanf(line, "%s = %[^\n]", name, value) == 2) {
-            // Если имя переменной совпадает с искомым, запись новых данных
             if (strcmp(name, q_data.variable) == 0) {
                 if (!is_empty(dbms)) {
-                    fprintf(temp_file, "%s =", name);
-                    write_tokens(temp_file, dbms, name);
-                    fprintf(temp_file, "\n");
+                    fprintf(temp_file, "%s =", name); // Записываем имя переменной во временный файл
+                    write_tokens(temp_file, dbms, name); // Записываем данные во временный файл
+                    fprintf(temp_file, "\n"); // Добавляем символ новой строки
                 }
-                found = 1;
+                found = 1;                    // Устанавливаем флаг, что переменная найдена
             } else {
-                // Иначе, запись строки без изменений
-                fprintf(temp_file, "%s\n", line);
+                fprintf(temp_file, "%s\n", line); // Копируем строку из исходного файла во временный файл
             }
         } else {
-            // Запись строки без изменений
-            fprintf(temp_file, "%s\n", line);
+            fprintf(temp_file, "%s\n", line); // Копируем строку из исходного файла во временный файл
         }
     }
 
-    // Если переменная не была найдена, запись новых данных в конец файла
     if (!found && !is_empty(dbms)) {
-        fprintf(temp_file, "%s =", q_data.variable);
-        write_tokens(temp_file, dbms, q_data.variable);
-        fprintf(temp_file, "\n");
+        fprintf(temp_file, "%s =", q_data.variable); // Записываем имя переменной во временный файл
+        write_tokens(temp_file, dbms, q_data.variable); // Записываем данные во временный файл
+        fprintf(temp_file, "\n"); // Добавляем символ новой строки
     }
 
-    // Закрытие файлов
-    fclose(file);
-    fclose(temp_file);
+    fclose(file);                            // Закрываем файл для чтения
+    fclose(temp_file);                       // Закрываем временный файл
 
-    // Замена оригинального файла временным файлом
     if (remove(filename) != 0 || rename("temp.txt", filename) != 0) {
-        perror("Failed to update file");
+        perror("Failed to update file");     // Выводим сообщение об ошибке, если не удалось обновить файл
     }
 }
 
-// Обработчик команд для стека
 void handle_stack(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в стек
-    dbms->v_type = _STACK;
-    dbms->data.stack = NULL;
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _STACK;                   // Устанавливаем тип структуры данных как стек
+    dbms->data.stack = NULL;                 // Инициализируем стек
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "SPUSH") == 0) {
-        dbms->data.stack = push(dbms->data.stack, data.value);
-        show(dbms->data.stack);
-        dbms->data.stack = reverse_stack(dbms->data.stack);
+        dbms->data.stack = push(dbms->data.stack, data.value); // Добавляем элемент в стек
+        show(dbms->data.stack);              // Выводим содержимое стека
+        dbms->data.stack = reverse_stack(dbms->data.stack); // Переворачиваем стек
     } else if (strcmp(data.command, "SPOP") == 0) {
-        dbms->data.stack = pop(dbms->data.stack);
-        show(dbms->data.stack);
-        dbms->data.stack = reverse_stack(dbms->data.stack);
+        dbms->data.stack = pop(dbms->data.stack); // Удаляем элемент из стека
+        show(dbms->data.stack);              // Выводим содержимое стека
+        dbms->data.stack = reverse_stack(dbms->data.stack); // Переворачиваем стек
     } else if (strcmp(data.command, "SSHOW") == 0) {
-        show(dbms->data.stack);
+        show(dbms->data.stack);              // Выводим содержимое стека
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Обработчик команд для односвязного списка
+void handle_set(DBMS *dbms, QueryData data, const char* filename) {
+    dbms->v_type = _SET;                     // Устанавливаем тип структуры данных как множество
+    dbms->data.set = create_set(10);         // Создаем множество с начальным размером 10
+    read_from_file(dbms, data, filename);    // Читаем данные из файла
+
+    if (strcmp(data.command, "ESETADD") == 0) {
+        int value = atoi(data.value);        // Преобразуем строку в число
+        set_add(dbms->data.set, value);      // Добавляем элемент в множество
+        printf("Элемент %d добавлен в множество.\n", value); // Выводим сообщение о добавлении элемента
+    } else if (strcmp(data.command, "ESETDEL") == 0) {
+        int value = atoi(data.value);        // Преобразуем строку в число
+        set_del(dbms->data.set, value);      // Удаляем элемент из множества
+        printf("Элемент %d удален из множества.\n", value); // Выводим сообщение об удалении элемента
+    } else if (strcmp(data.command, "ESET_AT") == 0) {
+        int value = atoi(data.value);        // Преобразуем строку в число
+        set_at(dbms->data.set, value);       // Ищем элемент в множестве
+    } else if (strcmp(data.command, "ESETSHOW") == 0) {
+        printf("Элементы множества: ");      // Выводим сообщение о выводе элементов множества
+        for (int i = 0; i < dbms->data.set->size; i++) {
+            printf("%d ", dbms->data.set->elements[i]); // Выводим элементы множества
+        }
+        printf("\n");                        // Добавляем символ новой строки
+    }
+
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
+}
+
 void handle_list(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в односвязный список
-    dbms->v_type = _SINGLE_LINKED_LIST;
-    dbms->data.list = create_list();
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _SINGLE_LINKED_LIST;      // Устанавливаем тип структуры данных как односвязный список
+    dbms->data.list = create_list();         // Создаем односвязный список
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "LPUSH_B") == 0) {
-        push_back(dbms->data.list, data.value);
+        push_back(dbms->data.list, data.value); // Добавляем элемент в конец списка
     } else if (strcmp(data.command, "LPUSH_F") == 0) {
-        push_front(dbms->data.list, data.value);
+        push_front(dbms->data.list, data.value); // Добавляем элемент в начало списка
     } else if (strcmp(data.command, "LDEL_B") == 0) {
-        pop_back(dbms->data.list);
+        pop_back(dbms->data.list);           // Удаляем элемент с конца списка
     } else if (strcmp(data.command, "LDEL_F") == 0) {
-        pop_front(dbms->data.list);
+        pop_front(dbms->data.list);          // Удаляем элемент с начала списка
     } else if (strcmp(data.command, "LDEL_V") == 0) {
-        remove_value(dbms->data.list, data.value);
+        remove_value(dbms->data.list, data.value); // Удаляем элемент по значению
     } else if (strcmp(data.command, "LSEARCH") == 0) {
-        Node* result = find_value(dbms->data.list, data.value);
-        printf(result ? "Value found: %s\n" : "Value not found\n", result ? result->data : "");
+        Node* result = find_value(dbms->data.list, data.value); // Ищем элемент по значению
+        printf(result ? "Value found: %s\n" : "Value not found\n", result ? result->data : ""); // Выводим результат поиска
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Обработчик команд для массива строк
 void handle_array(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в массив строк
-    dbms->v_type = _ARR;
-    dbms->data.arr = create_string_array(10);
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _ARR;                     // Устанавливаем тип структуры данных как массив строк
+    dbms->data.arr = create_string_array(10); // Создаем массив строк с начальным размером 10
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "MPUSH") == 0) {
-        append_string(dbms->data.arr, data.value);
+        append_string(dbms->data.arr, data.value); // Добавляем строку в массив
     } else if (strcmp(data.command, "MINSERT") == 0) {
-        insertStringAt(dbms->data.arr, atoi(data.key), data.value);
+        insertStringAt(dbms->data.arr, atoi(data.key), data.value); // Вставляем строку в массив по индексу
     } else if (strcmp(data.command, "MREPLACE") == 0) {
-        replaceStringAt(dbms->data.arr, atoi(data.key), data.value);
+        replaceStringAt(dbms->data.arr, atoi(data.key), data.value); // Заменяем строку в массиве по индексу
     } else if (strcmp(data.command, "MGET") == 0) {
-        char* value = getStringAt(dbms->data.arr, atoi(data.value));
-        printf(value ? "Value at index %d: %s\n" : "", atoi(data.value), value);
+        char* value = getStringAt(dbms->data.arr, atoi(data.value)); // Получаем строку по индексу
+        printf(value ? "Value at index %d: %s\n" : "", atoi(data.value), value); // Выводим строку
     } else if (strcmp(data.command, "MDEL_I") == 0) {
-        deleteStringAt(dbms->data.arr, atoi(data.key));
+        deleteStringAt(dbms->data.arr, atoi(data.key)); // Удаляем строку по индексу
     } else if (strcmp(data.command, "MSIZE") == 0) {
-        printf("Array size: %d\n", getStringArraySize(dbms->data.arr));
+        printf("Array size: %d\n", getStringArraySize(dbms->data.arr)); // Выводим размер массива
     } else if (strcmp(data.command, "MREAD") == 0) {
-        printStringArray(dbms->data.arr);
+        printStringArray(dbms->data.arr);    // Выводим содержимое массива
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Обработчик команд для хеш-карты
 void handle_hash_map(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в хеш-карту
-    dbms->v_type = _HASH_MAP;
-    dbms->data.hash_map = hash_map_create(10);
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _HASH_MAP;                // Устанавливаем тип структуры данных как хеш-таблица
+    dbms->data.hash_map = hash_map_create(10); // Создаем хеш-таблицу с начальным размером 10
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "HSET") == 0) {
-        dbms->data.hash_map = hash_map_insert(dbms->data.hash_map, data.key, data.value);
+        dbms->data.hash_map = hash_map_insert(dbms->data.hash_map, data.key, data.value); // Добавляем пару ключ-значение в хеш-таблицу
     } else if (strcmp(data.command, "HGET") == 0) {
-        char *value = hash_map_at(dbms->data.hash_map, data.key);
-        printf(value ? "Value at key '%s': %s\n" : "Key '%s' not found in hash map.\n", data.key, value);
+        char *value = hash_map_at(dbms->data.hash_map, data.key); // Получаем значение по ключу
+        printf(value ? "Value at key '%s': %s\n" : "Key '%s' not found in hash map.\n", data.key, value); // Выводим значение
     } else if (strcmp(data.command, "HDEL") == 0) {
-        hash_map_remove(dbms->data.hash_map, data.key);
+        hash_map_remove(dbms->data.hash_map, data.key); // Удаляем пару ключ-значение из хеш-таблицы
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Обработчик команд для очереди
 void handle_queue(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в очередь
-    dbms->v_type = _QUEUE;
-    dbms->data.queue = (queue*)malloc(sizeof(queue));
-    init_queue(dbms->data.queue);
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _QUEUE;                   // Устанавливаем тип структуры данных как очередь
+    dbms->data.queue = (queue*)malloc(sizeof(queue)); // Выделяем память для очереди
+    init_queue(dbms->data.queue);            // Инициализируем очередь
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "QPUSH") == 0) {
-        push_queue(dbms->data.queue, data.value);
+        push_queue(dbms->data.queue, data.value); // Добавляем элемент в очередь
     } else if (strcmp(data.command, "QPOP") == 0) {
-        pop_queue(dbms->data.queue);
+        pop_queue(dbms->data.queue);         // Удаляем элемент из очереди
     } else if (strcmp(data.command, "QSHOW") == 0) {
         Node* current = dbms->data.queue->front;
         while (current) {
-            printf("%s ", current->data);
+            printf("%s ", current->data);    // Выводим элементы очереди
             current = current->next;
         }
-        printf("\n");
+        printf("\n");                        // Добавляем символ новой строки
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Обработчик команд для двусвязного списка
 void handle_doubly_linked_list(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в двусвязный список
-    dbms->v_type = _DOUBLE_LINKED_LIST;
-    dbms->data.dlist = (DoublyLinkedList*)malloc(sizeof(DoublyLinkedList));
-    initDoublyLinkedList(dbms->data.dlist);
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _DOUBLE_LINKED_LIST;      // Устанавливаем тип структуры данных как двусвязный список
+    dbms->data.dlist = (DoublyLinkedList*)malloc(sizeof(DoublyLinkedList)); // Выделяем память для двусвязного списка
+    initDoublyLinkedList(dbms->data.dlist);  // Инициализируем двусвязный список
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "DPUSH_B") == 0) {
-        addToDoublyLinkedListTail(dbms->data.dlist, data.value);
+        addToDoublyLinkedListTail(dbms->data.dlist, data.value); // Добавляем элемент в конец двусвязного списка
     } else if (strcmp(data.command, "DPUSH_F") == 0) {
-        addToDoublyLinkedListHead(dbms->data.dlist, data.value);
+        addToDoublyLinkedListHead(dbms->data.dlist, data.value); // Добавляем элемент в начало двусвязного списка
     } else if (strcmp(data.command, "DDEL_B") == 0) {
-        removeFromDoublyLinkedListTail(dbms->data.dlist);
+        removeFromDoublyLinkedListTail(dbms->data.dlist); // Удаляем элемент с конца двусвязного списка
     } else if (strcmp(data.command, "DDEL_F") == 0) {
-        removeFromDoublyLinkedListHead(dbms->data.dlist);
+        removeFromDoublyLinkedListHead(dbms->data.dlist); // Удаляем элемент с начала двусвязного списка
     } else if (strcmp(data.command, "DDEL_V") == 0) {
-        removeDoublyLinkedListNodeByValue(dbms->data.dlist, data.value);
+        removeDoublyLinkedListNodeByValue(dbms->data.dlist, data.value); // Удаляем элемент по значению
     } else if (strcmp(data.command, "DSEARCH") == 0) {
-        Node *result = findDoublyLinkedListNodeByValue(dbms->data.dlist, data.value);
-        printf(result ? "Value found: %s\n" : "Value not found\n", result ? result->data : "");
+        Node *result = findDoublyLinkedListNodeByValue(dbms->data.dlist, data.value); // Ищем элемент по значению
+        printf(result ? "Value found: %s\n" : "Value not found\n", result ? result->data : ""); // Выводим результат поиска
     } else if (strcmp(data.command, "DSHOW") == 0) {
-        printDoublyLinkedList(dbms->data.dlist);
+        printDoublyLinkedList(dbms->data.dlist); // Выводим содержимое двусвязного списка
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Обработчик команд для бинарного дерева
 void handle_tree(DBMS *dbms, QueryData data, const char* filename) {
-    // Установка типа структуры данных в бинарное дерево
-    dbms->v_type = _TREE;
-    dbms->data.tree = createBinaryTree();
-    // Чтение данных из файла
-    dbms = read_from_file(dbms, data, filename);
+    dbms->v_type = _TREE;                    // Устанавливаем тип структуры данных как дерево
+    dbms->data.tree = createBinaryTree();    // Создаем бинарное дерево
+    dbms = read_from_file(dbms, data, filename); // Читаем данные из файла
 
-    // Обработка команды в зависимости от типа команды
     if (strcmp(data.command, "TINSERT") == 0) {
-        insertElement(dbms->data.tree, atoi(data.value));
+        insertElement(dbms->data.tree, atoi(data.value)); // Добавляем элемент в дерево
     } else if (strcmp(data.command, "TSEARCH") == 0) {
-        int value = atoi(data.value);
-        printf(searchElement(dbms->data.tree, value) ? "Value %d found in tree.\n" : "Value %d not found in tree.\n", value);
+        int value = atoi(data.value);        // Преобразуем строку в число
+        printf(searchElement(dbms->data.tree, value) ? "Value %d found in tree.\n" : "Value %d not found in tree.\n", value); // Ищем элемент в дереве
     } else if (strcmp(data.command, "TISFULL") == 0) {
-        printf(isFull(dbms->data.tree) ? "Tree is a full binary tree.\n" : "Tree is not a full binary tree.\n");
+        printf(isFull(dbms->data.tree) ? "Tree is a full binary tree.\n" : "Tree is not a full binary tree.\n"); // Проверяем, является ли дерево полным бинарным деревом
     } else if (strcmp(data.command, "TSHOW") == 0) {
-        print(dbms->data.tree, stdout);
+        print(dbms->data.tree, stdout);      // Выводим содержимое дерева
     }
-    // Запись данных в файл
-    write_to_file(dbms, data, filename);
+    write_to_file(dbms, data, filename);     // Записываем данные в файл
 }
 
-// Основной обработчик команд
 void comand_handler(DBMS *dbms, QueryData data, const char* filename) {
-    // В зависимости от первого символа команды, вызов соответствующего обработчика
-    switch (data.command[0]) {
-        case 'S': handle_stack(dbms, data, filename); break;
-        case 'L': handle_list(dbms, data, filename); break;
-        case 'M': handle_array(dbms, data, filename); break;
-        case 'H': handle_hash_map(dbms, data, filename); break;
-        case 'Q': handle_queue(dbms, data, filename); break;
-        case 'D': handle_doubly_linked_list(dbms, data, filename); break;
-        case 'T': handle_tree(dbms, data, filename); break;
+    switch (data.command[0]) {               // Определяем первую букву команды
+        case 'S': handle_stack(dbms, data, filename); break; // Обрабатываем команду для стека
+        case 'L': handle_list(dbms, data, filename); break; // Обрабатываем команду для односвязного списка
+        case 'M': handle_array(dbms, data, filename); break; // Обрабатываем команду для массива строк
+        case 'H': handle_hash_map(dbms, data, filename); break; // Обрабатываем команду для хеш-таблицы
+        case 'Q': handle_queue(dbms, data, filename); break; // Обрабатываем команду для очереди
+        case 'D': handle_doubly_linked_list(dbms, data, filename); break; // Обрабатываем команду для двусвязного списка
+        case 'T': handle_tree(dbms, data, filename); break; // Обрабатываем команду для дерева
+        case 'E': handle_set(dbms, data, filename); break; // Обрабатываем команду для множества
     }
 }
