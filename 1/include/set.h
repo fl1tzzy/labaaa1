@@ -1,20 +1,25 @@
-#ifndef SET_H 
-#define SET_H  
+#ifndef SET_H
+#define SET_H   
 
-#include <stdio.h>  // Подключаем стандартную библиотеку ввода-вывода.
-#include <stdlib.h>  // Подключаем стандартную библиотеку для работы с памятью и другими функциями.
-#include <stdbool.h>  // Подключаем библиотеку для использования типа данных bool.
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 
-typedef struct Set {  // Определяем структуру Set.
-    int *elements;  // Указатель на массив элементов множества.
-    size_t capacity;  // Переменная для хранения текущей емкости множества.
-    size_t size;  // Переменная для хранения текущего размера множества.
-} Set;  // Завершаем определение структуры и даем ей имя Set.
+typedef struct Set {
+    char **elements;    // Массив строк (оригинальный массив для хранения элементов)
+    size_t capacity;    // Ёмкость множества
+    size_t size;        // Текущий размер множества
+    char **hash_table;  // Хэш-таблица для поиска
+    size_t hash_capacity; // Ёмкость хэш-таблицы
+} Set;
 
-Set *create_set(int capacity);  // Объявляем функцию для создания нового множества с заданной емкостью.
-bool contains(Set *set, int element);  // Объявляем функцию для проверки наличия элемента в множестве.
-void set_add(Set *set, int element);  // Объявляем функцию для добавления элемента в множество.
-void set_at(Set *set, int element);  // Объявляем функцию для поиска элемента в множестве и вывода сообщения о его наличии.
-void set_del(Set *set, int element);  // Объявляем функцию для удаления элемента из множества.
+Set *create_set(int capacity);// Объявляем функцию для создания нового множества с заданной емкостью.
+bool contains(Set *set, const char *element);// Объявляем функцию для проверки наличия элемента в множестве.
+void set_add(Set *set, const char *element);// Объявляем функцию для добавления элемента в множество.
+void set_at(Set *set, const char *element);// Объявляем функцию для поиска элемента в множестве и вывода сообщения о его наличии.
+void set_del(Set *set, const char *element); // Объявляем функцию для удаления элемента из множества.
+void free_set(Set *set);
 
-#endif  // Завершаем блок условной компиляции.
+#endif
+
