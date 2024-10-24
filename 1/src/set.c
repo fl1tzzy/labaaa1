@@ -1,68 +1,100 @@
-#include "../include/set.h" 
+#include "../include/set.h"
 
-Set *create_set(int capacity) {  // Функция для создания нового множества с заданной начальной емкостью.
-    Set *set = malloc(sizeof(Set));  // Выделяем память для структуры Set.
-    set->elements = (int *)malloc(capacity * sizeof(int));  // Выделяем память для массива элементов множества.
-    set->size = 0;  // Инициализируем размер множества нулем (множество пустое).
-    set->capacity = capacity;  // Устанавливаем начальную емкость множества.
-    return set;  // Возвращаем указатель на созданное множество.
+// Хэш-функция
+unsigned long hash_function(const char *str, size_t capacity) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c;  // hash * 33 + c
+    }
+    return hash % capacity;
 }
 
-bool contains(Set *set, int element) {  // Функция для проверки наличия элемента в множестве.
-    for (int i = 0; i < set->size; i++) {  // Проходим по всем элементам множества.
-        if (set->elements[i] == element) {  // Если элемент найден.
-            return true;  // Возвращаем true (элемент есть в множестве).
-        }
-    }
-    return false;  // Возвращаем false (элемента нет в множестве).
+// Создание множества с хэш-таблицей
+Set *create_set(int capacity) {
+    Set *set = malloc(sizeof(Set));
+    set->elements = (char **)malloc(capacity * sizeof(char *));
+    set->hash_table = (char **)calloc(capacity, sizeof(char *));  // Инициализация хэш-таблицы
+    set->size = 0;
+    set->capacity = capacity;
+    set->hash_capacity = capacity;
+    return set;
 }
 
-void resize_set(Set *set) {  // Функция для увеличения емкости множества.
-    set->capacity *= 2;  // Удваиваем емкость множества.
-    set->elements = realloc(set->elements, set->capacity * sizeof(int));  // Перераспределяем память для массива элементов.
+// Проверка наличия элемента в множестве
+bool contains(Set *set, const char *element) {
+    unsigned long hash_index = hash_function(element, set->hash_capacity);
+    if (set->hash_table[hash_index] != NULL && strcmp(set->hash_table[hash_index], element) == 0) {
+        return true;
+    }
+    return false;
 }
 
-void set_add(Set *set, int element) {  // Функция для добавления элемента в множество.
-    if(set->size == set->capacity) {  // Если множество заполнено.
-        resize_set(set);  // Увеличиваем емкость множества.
+// Увеличение размера множества
+void resize_set(Set *set) {
+    set->capacity *= 2;
+    set->elements = realloc(set->elements, set->capacity * sizeof(char *));
+    set->hash_table = realloc(set->hash_table, set->capacity * sizeof(char *));  // Увеличиваем размер хэш-таблицы
+    for (int i = set->hash_capacity; i < set->capacity; i++) {
+        set->hash_table[i] = NULL;  // Инициализируем новые элементы NULL
     }
-
-    if (contains(set, element)) {  // Если элемент уже есть в множестве.
-        return;  // Ничего не делаем и выходим из функции.
-    }
-
-    if (set->size == set->capacity) {  // Если множество заполнено (повторная проверка).
-        set->capacity *= 2;  // Удваиваем емкость множества.
-        set->elements = (int *)realloc(set->elements, set->capacity * sizeof(int));  // Перераспределяем память для массива элементов.
-    }
-
-    set->elements[set->size] = element;  // Добавляем элемент в конец множества.
-    set->size++;  // Увеличиваем размер множества.
+    set->hash_capacity = set->capacity;
 }
 
-void set_at(Set *set, int element) {  // Функция для поиска элемента в множестве и вывода сообщения о его наличии.
-    for (int i = 0; i < set->size; i++) {  // Проходим по всем элементам множества.
-        if (set->elements[i] == element) {  // Если элемент найден.
-            printf("Элемент %d найден в множестве.\n", element);  // Выводим сообщение о том, что элемент найден.
-            return;  // Выходим из функции.
-        }
+// Добавление элемента в множество и хэш-таблицу
+void set_add(Set *set, const char *element) {
+    if (set->size == set->capacity) {
+        resize_set(set);
     }
-    printf("Элемент %d не найден в множестве.\n", element);  // Выводим сообщение о том, что элемент не найден.
+
+    if (contains(set, element)) {
+        return;
+    }
+
+    // Добавляем в оригинальный массив
+    set->elements[set->size] = strdup(element);
+    set->size++;
+
+    // Добавляем элемент в хэш-таблицу
+    unsigned long hash_index = hash_function(element, set->hash_capacity);
+    set->hash_table[hash_index] = set->elements[set->size - 1];
 }
 
-void set_del(Set *set, int element) {  // Функция для удаления элемента из множества.
-    for (int i = 0; i < set->size; i++) {  // Проходим по всем элементам множества.
-        if (set->elements[i] == element) {  // Если элемент найден.
-            for (int j = i; j < set->size - 1; j++) {  // Сдвигаем все элементы после удаляемого на одну позицию влево.
-                set->elements[j] = set->elements[j + 1];
+// Поиск элемента в множестве
+void set_at(Set *set, const char *element) {
+    if (contains(set, element)) {
+        printf("Элемент '%s' найден в множестве.\n", element);
+    } else {
+        printf("Элемент '%s' не найден в множестве.\n", element);
+    }
+}
+
+// Удаление элемента из множества
+void set_del(Set *set, const char *element) {
+    unsigned long hash_index = hash_function(element, set->hash_capacity);
+    if (set->hash_table[hash_index] != NULL && strcmp(set->hash_table[hash_index], element) == 0) {
+        free(set->hash_table[hash_index]);
+        set->hash_table[hash_index] = NULL;
+
+        for (int i = 0; i < set->size; i++) {
+            if (strcmp(set->elements[i], element) == 0) {
+                free(set->elements[i]);
+                for (int j = i; j < set->size - 1; j++) {
+                    set->elements[j] = set->elements[j + 1];
+                }
+                set->size--;
+                break;
             }
-            set->size--;  // Уменьшаем размер множества.
-            return;  // Выходим из функции.
         }
     }
 }
 
-void free_set(Set *set) {  // Функция для освобождения памяти, выделенной под множество.
-    free(set->elements);  // Освобождаем память, выделенную под массив элементов.
-    free(set);  // Освобождаем память, выделенную под структуру Set.
+// Освобождение памяти
+void free_set(Set *set) {
+    for (int i = 0; i < set->size; i++) {
+        free(set->elements[i]);
+    }
+    free(set->elements);
+    free(set->hash_table);
+    free(set);
 }
